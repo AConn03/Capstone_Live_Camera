@@ -156,16 +156,39 @@ const InspectionEffect = {
 
         // Apply Mask to Image Data
         for (let idx = 0; idx < w * h; idx++) {
-            let keep = false;
-            if (mode === 'crack' && crackMask && crackMask[idx]) keep = true;
-            if (mode === 'rust' && rustMask && rustMask[idx]) keep = true;
-            if (mode === 'combined' && ((crackMask && crackMask[idx]) || (rustMask && rustMask[idx]))) keep = true;
+            let keepCrack = false;
+            let keepRust = false;
 
-            if (!keep) {
-                let i = idx * 4;
-                data[i] = 0;
-                data[i+1] = 0;
-                data[i+2] = 0;
+            if ((mode === 'crack' || mode === 'combined') && crackMask && crackMask[idx]) keepCrack = true;
+            if ((mode === 'rust' || mode === 'combined') && rustMask && rustMask[idx]) keepRust = true;
+
+            let keep = keepCrack || keepRust;
+            let i = idx * 4;
+
+            if (params.viewMode === 'highlight') {
+                if (keep) {
+                    // Tint the detected pixels to stand out
+                    if (keepRust && keepCrack) {
+                        data[i] = (data[i] + 255) / 2;       // Yellow for both
+                        data[i+1] = (data[i+1] + 255) / 2;
+                        data[i+2] = data[i+2] / 2;
+                    } else if (keepRust) {
+                        data[i] = (data[i] + 255) / 2;       // Red for rust
+                        data[i+1] = data[i+1] / 2;
+                        data[i+2] = data[i+2] / 2;
+                    } else if (keepCrack) {
+                        data[i] = data[i] / 2;               // Green for crack
+                        data[i+1] = (data[i+1] + 255) / 2;
+                        data[i+2] = data[i+2] / 2;
+                    }
+                }
+            } else {
+                // Original behavior: Hide non-matching pixels
+                if (!keep) {
+                    data[i] = 0;
+                    data[i+1] = 0;
+                    data[i+2] = 0;
+                }
             }
         }
 
@@ -180,6 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const toggleCameraButton = document.getElementById('toggle-camera');
     const switchCameraButton = document.getElementById('switch-camera');
+    const toggleViewButton = document.getElementById('toggle-view');
     
     const effectSelect = document.getElementById('effect-select');
     const crackControls = document.getElementById('crack-controls');
@@ -222,6 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let hideControlsTimeout = null;
     let usingBackCamera = true;
     let currentMode = 'combined';
+    let currentViewMode = 'mask';
     let animationFrameId = null;
     const HIDE_DELAY = 3000;
 
@@ -290,6 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 for (let key in sliders) {
                     params[key] = parseInt(sliders[key].value, 10);
                 }
+                params.viewMode = currentViewMode;
 
                 InspectionEffect.apply(singleVideo, canvasSingle, params, currentMode);
                 canvasSingle.style.display = 'block';
@@ -355,9 +381,22 @@ document.addEventListener('DOMContentLoaded', function() {
             await startCamera();
         }
     }
+
+    function toggleView() {
+        if (currentViewMode === 'mask') {
+            currentViewMode = 'highlight';
+            toggleViewButton.textContent = 'View: Highlight';
+        } else {
+            currentViewMode = 'mask';
+            toggleViewButton.textContent = 'View: Mask';
+        }
+        resetHideControlsTimer();
+    }
+
     // Attach Listeners
     toggleCameraButton.addEventListener('click', toggleCamera);
     switchCameraButton.addEventListener('click', switchCamera);
+    toggleViewButton.addEventListener('click', toggleView);
     effectSelect.addEventListener('change', changeMode);
     
     for(let key in sliders) {
