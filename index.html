@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust & Crack Inspection Tool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <video id="single-video" autoplay playsinline muted></video>
+    <div class="canvas-container">
+        <canvas id="canvas-single" class="effect-canvas"></canvas>
+    </div>
+
+    <div id="status">Click/Tap anywhere to start</div>
+
+    <div id="controls-panel">
+        <div class="controls-row">
+            <button id="toggle-camera">Start Camera</button>
+            <button id="switch-camera">Switch Camera</button>
+            <select id="effect-select">
+                <option value="combined">Combined Mode</option>
+                <option value="crack">Crack Mode</option>
+                <option value="rust">Rust Mode</option>
+            </select>
+        </div>
+        
+        <div id="crack-controls" class="effect-controls">
+            <div class="slider-container">
+                <label>Edge Threshold: <span id="valCrackThresh">5</span></label>
+                <input type="range" id="crackThreshold" min="1" max="255" value="1" step="1">
+            </div>
+            <div class="slider-container">
+                <label>Line Thickness: <span id="valCrackThickness">1</span></label>
+                <input type="range" id="crackThickness" min="0" max="10" value="1" step="1">
+            </div>
+            <div class="slider-container">
+                <label>Band Pass Center (0-100): <span id="valCrackBandMedian">15</span></label>
+                <input type="range" id="crackBandMedian" min="0" max="100" value="20" step="1">
+            </div>
+            <div class="slider-container">
+                <label>Band Pass Width: <span id="valCrackBandRange">10</span></label>
+                <input type="range" id="crackBandRange" min="1" max="100" value="5" step="1">
+            </div>
+        </div>
+        
+        <div id="rust-controls" class="effect-controls">
+            <div class="slider-container">
+                <label>Rust Hue Min: <span id="valRustHueMin">5</span>°</label>
+                <input type="range" id="rustHueMin" min="0" max="360" value="36" step="1">
+            </div>
+            <div class="slider-container">
+                <label>Rust Hue Max: <span id="valRustHueMax">35</span>°</label>
+                <input type="range" id="rustHueMax" min="0" max="360" value="100" step="1">
+            </div>
+            <div class="slider-container">
+                <label>Rust Saturation Min: <span id="valRustSatMin">30</span>%</label>
+                <input type="range" id="rustSatMin" min="0" max="100" value="0" step="1">
+            </div>
+            <div class="slider-container">
+                <label>Rust Saturation Max: <span id="valRustSatMax">100</span>%</label>
+                <input type="range" id="rustSatMax" min="0" max="100" value="100" step="1">
+            </div>
+            <div class="slider-container">
+                <label>Rust Brightness Min: <span id="valRustValMin">20</span>%</label>
+                <input type="range" id="rustValMin" min="0" max="100" value="20" step="1">
+            </div>
+            <div class="slider-container">
+                <label>Rust Brightness Max: <span id="valRustValMax">80</span>%</label>
+                <input type="range" id="rustValMax" min="0" max="100" value="30" step="1">
+            </div>
+            <div class="slider-container">
+                <label>Rust Border Padding: <span id="valRustPad">15</span></label>
+                <input type="range" id="rustPadding" min="0" max="40" value="10" step="1">
+            </div>
+        </div>
+        
+        <div class="info-row">
+            <span id="camera-display">Camera: Back</span>
+            <span id="effect-display">Mode: Combined Mode</span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
