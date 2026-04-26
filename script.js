@@ -16,43 +16,73 @@ function rgbToHsv(r, g, b) {
     return [h * 360, s * 100, v * 100];
 }
 
-function dilateMask(mask, w, h, radius) {
-    if (radius === 0) return mask;
-    let temp = new Uint8Array(w * h);
-    let out = new Uint8Array(w * h);
-
-    // Horizontal pass
-    for (let y = 0; y < h; y++) {
-        let r = 0;
-        for (let x = 0; x < w; x++) {
-            let i = y * w + x;
-            if (mask[i]) { r = radius; temp[i] = 1; }
-            else if (r > 0) { temp[i] = 1; r--; }
-        }
-        r = 0;
-        for (let x = w - 1; x >= 0; x--) {
-            let i = y * w + x;
-            if (mask[i]) { r = radius; temp[i] = 1; }
-            else if (r > 0) { temp[i] = 1; r--; }
-        }
-    }
-
-    // Vertical pass
-    for (let x = 0; x < w; x++) {
-        let r = 0;
+// Fast Box Blur Pass (Building block for Gaussian approximation)
+function boxBlurPass(src, dst, w, h, r, isHorizontal) {
+    const windowSize = r * 2 + 1;
+    if (isHorizontal) {
         for (let y = 0; y < h; y++) {
-            let i = y * w + x;
-            if (temp[i]) { r = radius; out[i] = 1; }
-            else if (r > 0) { out[i] = 1; r--; }
+            let sum = 0;
+            let offset = y * w;
+            // Initial window sum
+            for (let i = -r; i <= r; i++) {
+                let clampedX = Math.max(0, Math.min(w - 1, i));
+                sum += src[offset + clampedX];
+            }
+            for (let x = 0; x < w; x++) {
+                dst[offset + x] = sum / windowSize;
+                let leftX = Math.max(0, x - r);
+                let rightX = Math.min(w - 1, x + r + 1);
+                sum += src[offset + rightX] - src[offset + leftX];
+            }
         }
-        r = 0;
-        for (let y = h - 1; y >= 0; y--) {
-            let i = y * w + x;
-            if (temp[i]) { r = radius; out[i] = 1; }
-            else if (r > 0) { out[i] = 1; r--; }
+    } else {
+        for (let x = 0; x < w; x++) {
+            let sum = 0;
+            // Initial window sum
+            for (let i = -r; i <= r; i++) {
+                let clampedY = Math.max(0, Math.min(h - 1, i));
+                sum += src[clampedY * w + x];
+            }
+            for (let y = 0; y < h; y++) {
+                dst[y * w + x] = sum / windowSize;
+                let topY = Math.max(0, y - r);
+                let bottomY = Math.min(h - 1, y + r + 1);
+                sum += src[bottomY * w + x] - src[topY * w + x];
+            }
         }
     }
-    return out;
+}
+
+// Smooth Dilation (Metaball / Gaussian Merging Effect)
+function smoothDilateMask(mask, w, h, radius) {
+    if (radius === 0) return mask;
+
+    let temp = new Float32Array(w * h);
+    let out = new Float32Array(w * h);
+
+    // Convert binary mask (0/1) to intensity (0/255) for blurring
+    for (let i = 0; i < mask.length; i++) {
+        out[i] = mask[i] ? 255 : 0;
+    }
+
+    // Apply 2 passes of box blur to closely approximate a smooth Gaussian blur
+    const passes = 2; 
+    for (let p = 0; p < passes; p++) {
+        boxBlurPass(out, temp, w, h, radius, true);  // Horizontal Pass
+        boxBlurPass(temp, out, w, h, radius, false); // Vertical Pass
+    }
+
+    let finalMask = new Uint8Array(w * h);
+    
+    // Thresholding: Any blurred region above 'threshold' intensity becomes solid.
+    // Lower threshold expands the area (dilation) and smoothly bridges gaps.
+    const threshold = 25; 
+
+    for (let i = 0; i < out.length; i++) {
+        finalMask[i] = out[i] > threshold ? 1 : 0;
+    }
+
+    return finalMask;
 }
 
 // Processing Core
@@ -118,8 +148,7 @@ const InspectionEffect = {
                             hueMatch = hue >= params.rustHueMin || hue <= params.rustHueMax;
                         }
                         
-                        // NEW: Explicitly ignore beige colors
-                        // Beige is usually in the 15-45 hue range, with lower saturation (< 50%) and high brightness (> 65%)
+                        // Explicitly ignore beige colors
                         let isBeige = (hue >= 10 && hue <= 50 && sat < 50 && val > 40);
 
                         // Only count as a hit if the hue matches AND it is not beige
@@ -129,7 +158,7 @@ const InspectionEffect = {
                     }
                 }
 
-                // Crack/Edge Detection (Using pre-filtered grayscale data)
+                // Crack/Edge Detection
                 if (mode === 'crack' || mode === 'combined') {
                     let lum = grayscaleData[idx];
                     let lumR = grayscaleData[idx + 1];
@@ -144,14 +173,14 @@ const InspectionEffect = {
             }
         }
 
-        // Dilation Pass (Line Thickness)
+        // Dilation Pass (Using the new smooth organic merging)
         let crackMask = null;
         let rustMask = null;
         if (mode === 'crack' || mode === 'combined') {
-            crackMask = dilateMask(crackHits, w, h, params.crackThickness);
+            crackMask = smoothDilateMask(crackHits, w, h, params.crackThickness);
         }
         if (mode === 'rust' || mode === 'combined') {
-            rustMask = dilateMask(rustHits, w, h, params.rustPadding);
+            rustMask = smoothDilateMask(rustHits, w, h, params.rustPadding);
         }
 
         // Apply Mask to Image Data
