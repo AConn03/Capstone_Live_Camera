@@ -1,21 +1,3 @@
-// Math Helpers
-function rgbToHsv(r, g, b) {
-    r /= 255; g /= 255; b /= 255;
-    let max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h = 0, s, v = max;
-    let d = max - min;
-    s = max === 0 ? 0 : d / max;
-    if (max !== min) {
-        switch (max) {
-            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-            case g: h = (b - r) / d + 2; break;
-            case b: h = (r - g) / d + 4; break;
-        }
-        h /= 6;
-    }
-    return [h * 360, s * 100, v * 100];
-}
-
 // True Circular Dilation
 function dilateMask(mask, w, h, radius) {
     if (radius === 0) return mask;
@@ -76,14 +58,17 @@ const InspectionEffect = {
         let rustHits = new Uint8Array(totalPixels);
         let grayscaleData = null;
 
-        // Band Pass Grayscale Generation (for Crack/Edge Detection)
-        if (mode === 'crack' || mode === 'combined') {
+        const isCrackMode = mode === 'crack' || mode === 'combined';
+        const isRustMode = mode === 'rust' || mode === 'combined';
+        const isHighlight = params.viewMode === 'highlight';
+
+        if (isCrackMode) {
             grayscaleData = new Float32Array(totalPixels);
             let bandMedianScaled = params.crackBandMedian * 2.55; 
             let halfWidth = (params.crackBandRange * 2.55) / 2;
 
             for (let i = 0; i < totalPixels; i++) {
-                let idx = i * 4;
+                let idx = i << 2; 
                 let r = data[idx], g = data[idx+1], b = data[idx+2];
                 let gray = 0.299 * r + 0.587 * g + 0.114 * b;
                 
@@ -94,16 +79,28 @@ const InspectionEffect = {
             }
         }
 
-        // Detection Pass
         for (let y = 0; y < h - 1; y++) {
             for (let x = 0; x < w - 1; x++) {
                 let idx = y * w + x;
-                let i = idx * 4;
+                let i = idx << 2;
 
-                // Rust Detection
-                if (mode === 'rust' || mode === 'combined') {
-                    let r = data[i], g = data[i+1], b = data[i+2];
-                    let [hue, sat, val] = rgbToHsv(r, g, b);
+                if (isRustMode) {
+                    let r_val = data[i] / 255, g_val = data[i+1] / 255, b_val = data[i+2] / 255;
+                    let max = Math.max(r_val, g_val, b_val), min = Math.min(r_val, g_val, b_val);
+                    let h_hue = 0, s_sat = 0, v_val = max;
+                    let d = max - min;
+                    
+                    if (max !== 0) s_sat = d / max;
+                    if (max !== min) {
+                        if (max === r_val) { h_hue = (g_val - b_val) / d + (g_val < b_val ? 6 : 0); }
+                        else if (max === g_val) { h_hue = (b_val - r_val) / d + 2; }
+                        else if (max === b_val) { h_hue = (r_val - g_val) / d + 4; }
+                        h_hue /= 6;
+                    }
+                    
+                    let hue = h_hue * 360;
+                    let sat = s_sat * 100;
+                    let val = v_val * 100;
                     
                     if (sat >= params.rustSatMin && sat <= params.rustSatMax && 
                         val >= params.rustValMin && val <= params.rustValMax) {
@@ -115,19 +112,16 @@ const InspectionEffect = {
                             hueMatch = hue >= params.rustHueMin || hue <= params.rustHueMax;
                         }
                         
-                        // Filters
                         let isBeige = (hue >= 10 && hue <= 50 && sat < 50 && val > 40);
                         let isGreen = (hue >= 70 && hue <= 160 && sat > 15 && val > 15);
 
-                        // Exclude beige and green backgrounds
                         if (hueMatch && !isBeige && !isGreen) {
                             rustHits[idx] = 1;
                         }
                     }
                 }
 
-                // Crack/Edge Detection
-                if (mode === 'crack' || mode === 'combined') {
+                if (isCrackMode) {
                     let lum = grayscaleData[idx];
                     let lumR = grayscaleData[idx + 1];
                     let lumB = grayscaleData[idx + w];
@@ -140,41 +134,35 @@ const InspectionEffect = {
             }
         }
 
-        // Dilation Pass
         let crackMask = null;
         let rustMask = null;
-        if (mode === 'crack' || mode === 'combined') {
-            crackMask = dilateMask(crackHits, w, h, params.crackThickness);
+        let scaledCrackThick = Math.max(0, Math.round(params.crackThickness * qualityScale));
+        let scaledRustPad = Math.max(0, Math.round(params.rustPadding * qualityScale));
+
+        if (isCrackMode) {
+            crackMask = dilateMask(crackHits, w, h, scaledCrackThick);
         }
-        if (mode === 'rust' || mode === 'combined') {
-            rustMask = dilateMask(rustHits, w, h, params.rustPadding);
+        if (isRustMode) {
+            rustMask = dilateMask(rustHits, w, h, scaledRustPad);
         }
 
-        // Apply Mask to Image Data
         for (let idx = 0; idx < totalPixels; idx++) {
-            let keepCrack = false;
-            let keepRust = false;
-
-            if ((mode === 'crack' || mode === 'combined') && crackMask && crackMask[idx]) keepCrack = true;
-            if ((mode === 'rust' || mode === 'combined') && rustMask && rustMask[idx]) keepRust = true;
+            let keepCrack = isCrackMode && crackMask && crackMask[idx];
+            let keepRust = isRustMode && rustMask && rustMask[idx];
 
             let keep = keepCrack || keepRust;
-            let i = idx * 4;
+            let i = idx << 2;
 
-            if (params.viewMode === 'highlight') {
+            if (isHighlight) {
                 if (keep) {
-                    if (keepRust && keepCrack) {
-                        data[i] = (data[i] + 255) / 2;
-                        data[i+1] = (data[i+1] + 255) / 2;
-                        data[i+2] = data[i+2] / 2;
+                    if (keepCrack) {
+                        data[i] = data[i] >> 1;
+                        data[i+1] = (data[i+1] + 255) >> 1;
+                        data[i+2] = data[i+2] >> 1;
                     } else if (keepRust) {
-                        data[i] = (data[i] + 255) / 2;
-                        data[i+1] = data[i+1] / 2;
-                        data[i+2] = data[i+2] / 2;
-                    } else if (keepCrack) {
-                        data[i] = data[i] / 2;
-                        data[i+1] = (data[i+1] + 255) / 2;
-                        data[i+2] = data[i+2] / 2;
+                        data[i] = (data[i] + 255) >> 1;
+                        data[i+1] = data[i+1] >> 1;
+                        data[i+2] = data[i+2] >> 1;
                     }
                 }
             } else {
@@ -190,7 +178,7 @@ const InspectionEffect = {
     }
 };
 
-// UI & Camera Application Logic
+// UI & Camera Application Logicx
 document.addEventListener('DOMContentLoaded', function() {
     const singleVideo = document.getElementById('single-video');
     const canvasSingle = document.getElementById('canvas-single');
@@ -198,31 +186,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleCameraButton = document.getElementById('toggle-camera');
     const switchCameraButton = document.getElementById('switch-camera');
     const toggleViewButton = document.getElementById('toggle-view');
+    const toggleConfigButton = document.getElementById('toggle-config');
     
     const effectSelect = document.getElementById('effect-select');
+    const configPanel = document.getElementById('config-panel');
     const crackControls = document.getElementById('crack-controls');
     const rustControls = document.getElementById('rust-controls');
+    const crackPresets = document.getElementById('crack-presets');
+    const rustPresets = document.getElementById('rust-presets');
     const controlsPanel = document.getElementById('controls-panel');
     const statusDiv = document.getElementById('status');
     const cameraDisplay = document.getElementById('camera-display');
     const effectDisplay = document.getElementById('effect-display');
 
-    // UPDATED Default Configuration States for Reset feature based on new HTML
     const defaults = {
-        crackThreshold: 100,
-        crackThickness: 5,
-        crackBandMedian: 45,
-        crackBandRange: 5,
-        rustHueMin: 0,
-        rustHueMax: 15,
-        rustSatMin: 30,
-        rustSatMax: 100,
-        rustValMin: 15,
-        rustValMax: 70,
-        rustPadding: 5
+        crackThreshold: 100, crackThickness: 5, crackBandMedian: 45, crackBandRange: 5,
+        rustHueMin: 0, rustHueMax: 15, rustSatMin: 30, rustSatMax: 100,
+        rustValMin: 15, rustValMax: 70, rustPadding: 5, resQuality: 50
     };
 
-    // Inputs Arrays for dynamic binding
+    const crackPresetValues = {
+        1: { crackThreshold: 100, crackThickness: 5, crackBandMedian: 25, crackBandRange: 10 },
+        2: { crackThreshold: 100, crackThickness: 5, crackBandMedian: 45, crackBandRange: 5 },
+        3: { crackThreshold: 100, crackThickness: 5, crackBandMedian: 65, crackBandRange: 5 }
+    };
+    const rustPresetValues = {
+        'rust1': { rustHueMin: 0, rustHueMax: 15, rustSatMin: 30, rustSatMax: 100, rustValMin: 15, rustValMax: 70, rustPadding: 5 },
+        'rust2': { rustHueMin: 0, rustHueMax: 45, rustSatMin: 62, rustSatMax: 83, rustValMin: 15, rustValMax: 100, rustPadding: 10 }
+    };
     const sliders = {
         crackThreshold: document.getElementById('crackThreshold'),
         crackThickness: document.getElementById('crackThickness'),
@@ -284,9 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     toggleViewButton.textContent = currentViewMode === 'mask' ? 'View: Mask' : 'View: Highlight';
                 }
             }
-        } catch(e) {
-            console.error("Could not load settings:", e);
-        }
+        } catch(e) { console.error("Could not load settings:", e); }
     }
 
     function saveSettings() {
@@ -300,20 +289,14 @@ document.addEventListener('DOMContentLoaded', function() {
             settings.mode = currentMode;
             settings.viewMode = currentViewMode;
             localStorage.setItem('inspectionAppSettings', JSON.stringify(settings));
-        } catch(e) {
-            console.error("Could not save settings:", e);
-        }
+        } catch(e) { console.error("Could not save settings:", e); }
     }
 
     async function startCamera() {
         try {
             statusDiv.textContent = 'Requesting camera access...';
             stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
-                    facingMode: usingBackCamera ? { exact: 'environment' } : 'user'
-                },
+                video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: usingBackCamera ? { exact: 'environment' } : 'user' },
                 audio: false
             });
             setupVideoStream();
@@ -323,9 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 usingBackCamera = false;
                 setupVideoStream();
-            } catch (fallbackError) {
-                statusDiv.textContent = `Error: ${fallbackError.message}`;
-            }
+            } catch (fallbackError) { statusDiv.textContent = `Error: ${fallbackError.message}`; }
         }
     }
 
@@ -396,12 +377,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         crackControls.classList.add('ui-hidden-element');
         rustControls.classList.add('ui-hidden-element');
+        crackPresets.style.display = 'none';
+        rustPresets.style.display = 'none'; // Add this line
 
         if (currentMode === 'crack' || currentMode === 'combined') {
             crackControls.classList.remove('ui-hidden-element');
+            crackPresets.style.display = 'flex';
         }
         if (currentMode === 'rust' || currentMode === 'combined') {
             rustControls.classList.remove('ui-hidden-element');
+            rustPresets.style.display = 'flex'; // Add this line
         }
         resetHideControlsTimer();
         saveSettings();
@@ -440,11 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function toggleCamera() {
-        if (stream) {
-            stopCamera();
-        } else {
-            await startCamera();
-        }
+        if (stream) { stopCamera(); } else { await startCamera(); }
     }
 
     function toggleView() {
@@ -458,6 +439,60 @@ document.addEventListener('DOMContentLoaded', function() {
         resetHideControlsTimer();
         saveSettings();
     }
+
+    // Toggle Config Panel
+    toggleConfigButton.addEventListener('click', () => {
+        configPanel.classList.toggle('ui-hidden-element');
+        resetHideControlsTimer();
+    });
+
+    // Crack Preset Applicator (Existing)
+    document.querySelectorAll('#crack-presets .preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const p = crackPresetValues[e.target.dataset.preset];
+            if (p) {
+                sliders.crackThreshold.value = p.crackThreshold;
+                sliders.crackThickness.value = p.crackThickness;
+                sliders.crackBandMedian.value = p.crackBandMedian;
+                sliders.crackBandRange.value = p.crackBandRange;
+                updateParams();
+            }
+        });
+    });
+
+    // Rust Preset Applicator (Add this block)
+    document.querySelectorAll('#rust-presets .preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const p = rustPresetValues[e.target.dataset.preset];
+            if (p) {
+                sliders.rustHueMin.value = p.rustHueMin;
+                sliders.rustHueMax.value = p.rustHueMax;
+                sliders.rustSatMin.value = p.rustSatMin;
+                sliders.rustSatMax.value = p.rustSatMax;
+                sliders.rustValMin.value = p.rustValMin;
+                sliders.rustValMax.value = p.rustValMax;
+                sliders.rustPadding.value = p.rustPadding;
+                updateParams();
+            }
+        });
+    });
+
+    // Rust Preset Applicator (Add this block)
+    document.querySelectorAll('#rust-presets .preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const p = rustPresetValues[e.target.dataset.preset];
+            if (p) {
+                sliders.rustHueMin.value = p.rustHueMin;
+                sliders.rustHueMax.value = p.rustHueMax;
+                sliders.rustSatMin.value = p.rustSatMin;
+                sliders.rustSatMax.value = p.rustSatMax;
+                sliders.rustValMin.value = p.rustValMin;
+                sliders.rustValMax.value = p.rustValMax;
+                sliders.rustPadding.value = p.rustPadding;
+                updateParams();
+            }
+        });
+    });
 
     // Reset Handlers
     document.getElementById('reset-crack').addEventListener('click', () => {

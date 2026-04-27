@@ -25,65 +25,79 @@
                 <option value="crack">Crack Mode</option>
                 <option value="rust">Rust Mode</option>
             </select>
+            <button id="toggle-config" class="config-btn">⚙ Config</button>
         </div>
         
-        <div id="quality-controls" class="effect-controls">
-            <div class="slider-container">
-                <label>Resolution Quality: <span id="valResQuality">100</span>%</label>
-                <input type="range" id="resQuality" min="10" max="100" value="100" step="1">
-            </div>
+        <div id="crack-presets" class="controls-row" style="margin-top: 10px;">
+            <button class="preset-btn" data-preset="1">Crack P1 (Band 25)</button>
+            <button class="preset-btn" data-preset="2">Crack P2 (Band 45)</button>
+            <button class="preset-btn" data-preset="3">Crack P3 (Band 65)</button>
         </div>
 
-        <div id="crack-controls" class="effect-controls">
-            <div class="slider-container">
-                <label>Edge Threshold: <span id="valCrackThresh">100</span></label>
-                <input type="range" id="crackThreshold" min="1" max="255" value="100" step="1">
-            </div>
-            <div class="slider-container">
-                <label>Line Thickness: <span id="valCrackThickness">5</span></label>
-                <input type="range" id="crackThickness" min="0" max="10" value="5" step="1">
-            </div>
-            <div class="slider-container">
-                <label>Band Pass Center (0-100): <span id="valCrackBandMedian">45</span></label>
-                <input type="range" id="crackBandMedian" min="0" max="100" value="45" step="1">
-            </div>
-            <div class="slider-container">
-                <label>Band Pass Width: <span id="valCrackBandRange">5</span></label>
-                <input type="range" id="crackBandRange" min="1" max="100" value="5" step="1">
-            </div>
-            <button id="reset-crack" class="reset-btn">Reset Crack Settings</button>
+        <div id="rust-presets" class="controls-row" style="margin-top: 10px; display: none;">
+            <button class="preset-btn" data-preset="rust1">Rust P1 (Standard)</button>
+            <button class="preset-btn" data-preset="rust2">Rust P2 (Wide Hue)</button>
         </div>
-        
-        <div id="rust-controls" class="effect-controls">
-            <div class="slider-container">
-                <label>Rust Hue Min: <span id="valRustHueMin">0</span>°</label>
-                <input type="range" id="rustHueMin" min="0" max="360" value="0" step="1">
+
+        <div id="config-panel" class="ui-hidden-element">
+            <div id="quality-controls" class="effect-controls" style="margin-top: 10px;">
+                <div class="slider-container">
+                    <label>Resolution Quality: <span id="valResQuality">50</span>%</label>
+                    <input type="range" id="resQuality" min="10" max="100" value="50" step="1">
+                </div>
             </div>
-            <div class="slider-container">
-                <label>Rust Hue Max: <span id="valRustHueMax">15</span>°</label>
-                <input type="range" id="rustHueMax" min="0" max="360" value="15" step="1">
+
+            <div id="crack-controls" class="effect-controls">
+                <div class="slider-container">
+                    <label>Edge Threshold: <span id="valCrackThresh">100</span></label>
+                    <input type="range" id="crackThreshold" min="1" max="255" value="100" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Line Thickness: <span id="valCrackThickness">5</span></label>
+                    <input type="range" id="crackThickness" min="0" max="10" value="5" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Band Pass Center (0-100): <span id="valCrackBandMedian">45</span></label>
+                    <input type="range" id="crackBandMedian" min="0" max="100" value="45" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Band Pass Width: <span id="valCrackBandRange">5</span></label>
+                    <input type="range" id="crackBandRange" min="1" max="100" value="5" step="1">
+                </div>
+                <button id="reset-crack" class="reset-btn">Reset Crack Settings</button>
             </div>
-            <div class="slider-container">
-                <label>Rust Saturation Min: <span id="valRustSatMin">30</span>%</label>
-                <input type="range" id="rustSatMin" min="0" max="100" value="30" step="1">
+            
+            <div id="rust-controls" class="effect-controls">
+                <div class="slider-container">
+                    <label>Rust Hue Min: <span id="valRustHueMin">0</span>°</label>
+                    <input type="range" id="rustHueMin" min="0" max="360" value="0" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Rust Hue Max: <span id="valRustHueMax">15</span>°</label>
+                    <input type="range" id="rustHueMax" min="0" max="360" value="15" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Rust Saturation Min: <span id="valRustSatMin">30</span>%</label>
+                    <input type="range" id="rustSatMin" min="0" max="100" value="30" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Rust Saturation Max: <span id="valRustSatMax">100</span>%</label>
+                    <input type="range" id="rustSatMax" min="0" max="100" value="100" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Rust Brightness Min: <span id="valRustValMin">15</span>%</label>
+                    <input type="range" id="rustValMin" min="0" max="100" value="15" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Rust Brightness Max: <span id="valRustValMax">70</span>%</label>
+                    <input type="range" id="rustValMax" min="0" max="100" value="70" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Rust Border Padding: <span id="valRustPad">5</span></label>
+                    <input type="range" id="rustPadding" min="0" max="40" value="5" step="1">
+                </div>
+                <button id="reset-rust" class="reset-btn">Reset Rust Settings</button>
             </div>
-            <div class="slider-container">
-                <label>Rust Saturation Max: <span id="valRustSatMax">100</span>%</label>
-                <input type="range" id="rustSatMax" min="0" max="100" value="100" step="1">
-            </div>
-            <div class="slider-container">
-                <label>Rust Brightness Min: <span id="valRustValMin">15</span>%</label>
-                <input type="range" id="rustValMin" min="0" max="100" value="15" step="1">
-            </div>
-            <div class="slider-container">
-                <label>Rust Brightness Max: <span id="valRustValMax">70</span>%</label>
-                <input type="range" id="rustValMax" min="0" max="100" value="70" step="1">
-            </div>
-            <div class="slider-container">
-                <label>Rust Border Padding: <span id="valRustPad">5</span></label>
-                <input type="range" id="rustPadding" min="0" max="40" value="5" step="1">
-            </div>
-            <button id="reset-rust" class="reset-btn">Reset Rust Settings</button>
         </div>
         
         <div class="info-row">

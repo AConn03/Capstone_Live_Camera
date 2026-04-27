@@ -142,6 +142,25 @@ button:disabled {
     transform: none;
 }
 
+.config-btn {
+    background: rgba(59, 130, 246, 0.4);
+    font-weight: bold;
+}
+
+.config-btn:hover {
+    background: rgba(59, 130, 246, 0.6);
+}
+
+.preset-btn {
+    background: rgba(16, 185, 129, 0.4);
+    font-size: 12px;
+    min-width: 100px;
+}
+
+.preset-btn:hover {
+    background: rgba(16, 185, 129, 0.6);
+}
+
 .reset-btn {
     grid-column: 1 / -1;
     margin-top: 5px;
