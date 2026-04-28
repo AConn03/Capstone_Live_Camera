@@ -1,32 +1,3 @@
-Gemini
-Create a md readme for this project that include settings and what they do viusally
-Conversation with Gemini
-Create a md readme for this project that include settings and what they do viusally
-
-Your MD (Markdown) README for the Rust & Crack Inspection Tool is ready. It details the functionality of every UI slider and button based on the logic in your script.js and index.html.
-
-Your README.md file is ready
-MD icon
- README 
-MD
-
-Summary of Documentation:
-Visual Settings: Explains how "Resolution Quality" impacts performance vs. detail.
-
-Crack Detection Logic: Details how the Band Pass filters and Edge Thresholds isolate structural lines.
-
-Rust Detection Logic: Explains the use of HSV (Hue, Saturation, Value) ranges to target specific oxidation colors while ignoring beige or green "noise".
-
-View Modes: Clarifies the difference between the high-contrast Mask view and the augmented reality Highlight view (which uses Green for cracks and Red for rust).
-
-Presets: Lists the quick-toggle configurations for different lighting and oxidation types.
-
-
-
-
-
-Gemini is AI and can make mistakes.
-
 # Rust & Crack Inspection Tool
 
 A real-time, browser-based computer vision tool designed to detect and highlight structural issues like cracks and rust using a device's camera. This tool is built for field inspection scenarios, providing adjustable filters to isolate specific visual anomalies.
@@ -87,7 +58,6 @@ The tool is highly configurable via the **Config (⚙)** panel. Adjusting these 
 - **Tech Stack**: HTML5 Video API, Canvas API, Vanilla JavaScript.
 - **Performance**: Processing is done per-pixel on the CPU. Using the "Resolution Quality" slider is recommended for older mobile devices.
 - **Privacy**: All processing happens locally in the browser. No camera data is sent to a server.
-README.md
-Displaying README.md.
+
 
 Auto generatated README with Google Gemini
