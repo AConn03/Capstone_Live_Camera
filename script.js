@@ -264,10 +264,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function showInfoPopup() {
         infoPopup.classList.remove('ui-hidden-element');
         
-        // Clear existing timer if user clicks again
         if (infoTimeout) clearTimeout(infoTimeout);
         
-        // Hide after 5 seconds
         infoTimeout = setTimeout(() => {
             infoPopup.classList.add('ui-hidden-element');
         }, 5000);
@@ -400,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
         crackControls.classList.add('ui-hidden-element');
         rustControls.classList.add('ui-hidden-element');
         crackPresets.style.display = 'none';
-        rustPresets.style.display = 'none'; // Add this line
+        rustPresets.style.display = 'none';
 
         if (currentMode === 'crack' || currentMode === 'combined') {
             crackControls.classList.remove('ui-hidden-element');
@@ -408,7 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (currentMode === 'rust' || currentMode === 'combined') {
             rustControls.classList.remove('ui-hidden-element');
-            rustPresets.style.display = 'flex'; // Add this line
+            rustPresets.style.display = 'flex';
         }
         resetHideControlsTimer();
         saveSettings();
@@ -469,7 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     infoBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent triggering the body-click controls toggle
+        e.stopPropagation();
         if (infoPopup.classList.contains('ui-hidden-element')) {
             showInfoPopup();
         } else {
@@ -484,7 +482,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Crack Preset Applicator (Existing)
+    // Crack Preset Applicator
     document.querySelectorAll('#crack-presets .preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const p = crackPresetValues[e.target.dataset.preset];
@@ -498,24 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Rust Preset Applicator (Add this block)
-    document.querySelectorAll('#rust-presets .preset-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const p = rustPresetValues[e.target.dataset.preset];
-            if (p) {
-                sliders.rustHueMin.value = p.rustHueMin;
-                sliders.rustHueMax.value = p.rustHueMax;
-                sliders.rustSatMin.value = p.rustSatMin;
-                sliders.rustSatMax.value = p.rustSatMax;
-                sliders.rustValMin.value = p.rustValMin;
-                sliders.rustValMax.value = p.rustValMax;
-                sliders.rustPadding.value = p.rustPadding;
-                updateParams();
-            }
-        });
-    });
-
-    // Rust Preset Applicator (Add this block)
+    // Rust Preset Applicator
     document.querySelectorAll('#rust-presets .preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const p = rustPresetValues[e.target.dataset.preset];
@@ -565,15 +546,11 @@ document.addEventListener('DOMContentLoaded', function() {
     updateParams();
     changeMode(); 
     
-    // ADD THIS: Auto-start attempt
     statusDiv.textContent = 'Initialising...';
         
-    // We wrap this in a timeout or call it directly to try and trigger the browser prompt
     startCamera().then(() => {
-        // If successful, the "Start Camera" button text should update
         toggleCameraButton.textContent = 'Stop Camera';
     }).catch(err => {
-        // If auto-start fails due to browser policy, show the tap message
         statusDiv.textContent = 'Click/Tap anywhere to start';
         console.log("Auto-start blocked by browser, awaiting user interaction.");
     });

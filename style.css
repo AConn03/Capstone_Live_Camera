@@ -192,7 +192,6 @@ option {
     display: none !important;
 }
 
-/* Info Button */
 #info-btn {
     position: fixed;
     top: 15px;
@@ -212,7 +211,6 @@ option {
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Info Popup */
 #info-popup {
     position: fixed;
     top: 55px;
