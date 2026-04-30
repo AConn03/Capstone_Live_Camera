@@ -199,6 +199,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const cameraDisplay = document.getElementById('camera-display');
     const effectDisplay = document.getElementById('effect-display');
 
+    const infoBtn = document.getElementById('info-btn');
+    const infoPopup = document.getElementById('info-popup');
+
     const defaults = {
         crackThreshold: 100, crackThickness: 5, crackBandMedian: 45, crackBandRange: 5,
         rustHueMin: 0, rustHueMax: 15, rustSatMin: 30, rustSatMax: 100,
@@ -256,6 +259,25 @@ document.addEventListener('DOMContentLoaded', function() {
     let lastFpsTime = 0;
     let currentFps = 0;
 
+    let infoTimeout = null;
+
+    function showInfoPopup() {
+        infoPopup.classList.remove('ui-hidden-element');
+        
+        // Clear existing timer if user clicks again
+        if (infoTimeout) clearTimeout(infoTimeout);
+        
+        // Hide after 5 seconds
+        infoTimeout = setTimeout(() => {
+            infoPopup.classList.add('ui-hidden-element');
+        }, 5000);
+    }
+    
+    function hideInfoPopup() {
+        infoPopup.classList.add('ui-hidden-element');
+        if (infoTimeout) clearTimeout(infoTimeout);
+    }
+    
     function loadSettings() {
         try {
             const saved = localStorage.getItem('inspectionAppSettings');
@@ -446,6 +468,22 @@ document.addEventListener('DOMContentLoaded', function() {
         resetHideControlsTimer();
     });
 
+    infoBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent triggering the body-click controls toggle
+        if (infoPopup.classList.contains('ui-hidden-element')) {
+            showInfoPopup();
+        } else {
+            hideInfoPopup();
+        }
+    });
+    
+    // Close popup if clicking anywhere else
+    document.body.addEventListener('click', (e) => {
+        if (!infoPopup.contains(e.target) && e.target !== infoBtn) {
+            hideInfoPopup();
+        }
+    });
+
     // Crack Preset Applicator (Existing)
     document.querySelectorAll('#crack-presets .preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -526,4 +564,17 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
     updateParams();
     changeMode(); 
+    
+    // ADD THIS: Auto-start attempt
+    statusDiv.textContent = 'Initialising...';
+        
+    // We wrap this in a timeout or call it directly to try and trigger the browser prompt
+    startCamera().then(() => {
+        // If successful, the "Start Camera" button text should update
+        toggleCameraButton.textContent = 'Stop Camera';
+    }).catch(err => {
+        // If auto-start fails due to browser policy, show the tap message
+        statusDiv.textContent = 'Click/Tap anywhere to start';
+        console.log("Auto-start blocked by browser, awaiting user interaction.");
+    });
 });
